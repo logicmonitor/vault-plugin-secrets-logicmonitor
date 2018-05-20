@@ -3,7 +3,7 @@ language: go
 go:
   - "1.8"
 
-before_install:
+install:
   - go get -v github.com/alecthomas/gometalinter
   - gometalinter --install
 
