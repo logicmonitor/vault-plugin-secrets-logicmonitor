@@ -8,6 +8,8 @@ LogicMonitor account API tokens.
 Reference: https://github.com/hashicorp/vault-auth-plugin-example/blob/master/README.md
 
 ## Adding the plugin to the Vault plugin catalog
+This step assumes you have configured a Vault plugin directory and that the
+plugin binary exists in that directory.
 
     $ export SHA256=$(shasum -a 256 "./vault-plugin-secrets-logicmonitor" | cut -d' ' -f1)
     $ vault write sys/plugins/catalog/lm-secrets-plugin \
