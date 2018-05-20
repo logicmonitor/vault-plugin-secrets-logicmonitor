@@ -110,10 +110,10 @@ func (r *Role) buildLMRoles() ([]lm.Role, error) {
 	return roles, nil
 }
 
-func (b *backend) getLMRoleIds(ctx context.Context, client *lm.DefaultApiService, roles []string) ([]int32, error) {
+func getLMRoleIds(ctx context.Context, client *lm.DefaultApiService, roles []string) ([]int32, error) {
 	var ret []int32
 	for _, n := range roles {
-		role, err := b.getLMRoleByName(ctx, client, n)
+		role, err := getLMRoleByName(ctx, client, n)
 		if err != nil {
 			return nil, err
 		}
@@ -122,7 +122,7 @@ func (b *backend) getLMRoleIds(ctx context.Context, client *lm.DefaultApiService
 	return ret, nil
 }
 
-func (b *backend) getLMRoleByName(ctx context.Context, client *lm.DefaultApiService, name string) (*lm.Role, error) {
+func getLMRoleByName(ctx context.Context, client *lm.DefaultApiService, name string) (*lm.Role, error) {
 	opts := lm.GetRoleListOpts{
 		Size:   optional.NewInt32(-1),
 		Offset: optional.NewInt32(0),
@@ -141,7 +141,7 @@ func (b *backend) getLMRoleByName(ctx context.Context, client *lm.DefaultApiServ
 	return nil, fmt.Errorf("LogicMonitor role %q not found", name)
 }
 
-func (b *backend) getLMUserByName(ctx context.Context, client *lm.DefaultApiService, name string) (*lm.Admin, error) {
+func getLMUserByName(ctx context.Context, client *lm.DefaultApiService, name string) (*lm.Admin, error) {
 	opts := lm.GetAdminListOpts{
 		Size:   optional.NewInt32(-1),
 		Offset: optional.NewInt32(0),
@@ -160,16 +160,16 @@ func (b *backend) getLMUserByName(ctx context.Context, client *lm.DefaultApiServ
 	return nil, fmt.Errorf("LogicMonitor user %q not found", name)
 }
 
-func (b *backend) getLMUserByID(ctx context.Context, client *lm.DefaultApiService, id int32) (*lm.Admin, error) {
-	opts := lm.GetAdminByIdOpts{}
-	restResponse, apiResponse, err := client.GetAdminById(ctx, id, &opts)
-	if _err := utilities.CheckAllErrors(restResponse, apiResponse, err); _err != nil {
-		return nil, fmt.Errorf("Failed to get users list when searching for %q: %v", id, _err)
-	}
-	return restResponse.Data, nil
-}
+// func getLMUserByID(ctx context.Context, client *lm.DefaultApiService, id int32) (*lm.Admin, error) {
+// 	opts := lm.GetAdminByIdOpts{}
+// 	restResponse, apiResponse, err := client.GetAdminById(ctx, id, &opts)
+// 	if _err := utilities.CheckAllErrors(restResponse, apiResponse, err); _err != nil {
+// 		return nil, fmt.Errorf("Failed to get users list when searching for %q: %v", id, _err)
+// 	}
+// 	return restResponse.Data, nil
+// }
 
-func (b *backend) deleteLMUser(ctx context.Context, client *lm.DefaultApiService, id int32) error {
+func deleteLMUser(ctx context.Context, client *lm.DefaultApiService, id int32) error {
 	restResponse, apiResponse, err := client.DeleteAdminById(ctx, id)
 	if _err := utilities.CheckAllErrors(restResponse, apiResponse, err); _err != nil {
 		return fmt.Errorf("Failed to delete user %q: %v", id, _err)
@@ -177,27 +177,26 @@ func (b *backend) deleteLMUser(ctx context.Context, client *lm.DefaultApiService
 	return nil
 }
 
-func (b *backend) createUpdateLMUser(ctx context.Context, client *lm.DefaultApiService, user *lm.Admin) (*lm.Admin, error) {
-	oldUser, err := b.getLMUserByName(ctx, client, user.Username)
+func createUpdateLMUser(ctx context.Context, client *lm.DefaultApiService, user *lm.Admin) (*lm.Admin, error) {
+	oldUser, err := getLMUserByName(ctx, client, user.Username)
 	if err != nil {
 		return nil, err
 	}
 
-	if oldUser != nil {
-		// user exists. update.
-		opts := lm.UpdateAdminByIdOpts{
-			ChangePassword: optional.NewBool(false),
-		}
-		restResponse, apiResponse, err := client.UpdateAdminById(ctx, oldUser.Id, *user, &opts)
-		if _err := utilities.CheckAllErrors(restResponse, apiResponse, err); _err != nil {
-			return nil, fmt.Errorf("Failed to update user: %v", _err)
+	if oldUser == nil {
+		restResponse, apiResponse, err2 := client.AddAdmin(ctx, *user)
+		if _err := utilities.CheckAllErrors(restResponse, apiResponse, err2); _err != nil {
+			return nil, fmt.Errorf("Failed to create user: %v", _err)
 		}
 		return restResponse.Data, nil
 	}
 
-	restResponse, apiResponse, err := client.AddAdmin(ctx, *user)
+	// user exists. update.
+	opts := lm.UpdateAdminByIdOpts{}
+
+	restResponse, apiResponse, err := client.UpdateAdminById(ctx, oldUser.Id, *user, &opts)
 	if _err := utilities.CheckAllErrors(restResponse, apiResponse, err); _err != nil {
-		return nil, fmt.Errorf("Failed to create user: %v", _err)
+		return nil, fmt.Errorf("Failed to update user: %v", _err)
 	}
 	return restResponse.Data, nil
 }

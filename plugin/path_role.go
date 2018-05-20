@@ -16,7 +16,7 @@ const (
 	rolesStoragePrefix = "roles"
 )
 
-func pathsRoles(b *backend) []*framework.Path {
+func pathsRoles(b *BackendLM) []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: fmt.Sprintf("roles/%s", framework.GenericNameRegex("name")),
@@ -62,7 +62,7 @@ func pathsRoles(b *backend) []*framework.Path {
 	}
 }
 
-func (b *backend) pathRolesExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
+func (b *BackendLM) pathRolesExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
 	nameRaw, ok := d.GetOk("name")
 	if !ok {
 		return false, errors.New("role name is required")
@@ -76,7 +76,7 @@ func (b *backend) pathRolesExistenceCheck(ctx context.Context, req *logical.Requ
 	return role != nil, nil
 }
 
-func (b *backend) pathRolesRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *BackendLM) pathRolesRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	nameRaw, ok := d.GetOk("name")
 	if !ok {
 		return logical.ErrorResponse("name is required"), nil
@@ -100,7 +100,7 @@ func (b *backend) pathRolesRead(ctx context.Context, req *logical.Request, d *fr
 	}, nil
 }
 
-func (b *backend) pathRolesDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *BackendLM) pathRolesDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	warnings := make([]string, 0)
 	nameRaw, ok := d.GetOk("name")
 	if !ok {
@@ -124,7 +124,7 @@ func (b *backend) pathRolesDelete(ctx context.Context, req *logical.Request, d *
 		return nil, err
 	}
 
-	err = b.deleteLMUser(ctx, client, role.ServiceAccountID)
+	err = deleteLMUser(ctx, client, role.ServiceAccountID)
 	if err != nil {
 		warnings = append(warnings, err.Error())
 	}
@@ -139,7 +139,7 @@ func (b *backend) pathRolesDelete(ctx context.Context, req *logical.Request, d *
 	return nil, nil
 }
 
-func (b *backend) pathRolesCreateUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *BackendLM) pathRolesCreateUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	warnings := make([]string, 0)
 	nameRaw, ok := d.GetOk("name")
 	if !ok {
@@ -163,7 +163,7 @@ func (b *backend) pathRolesCreateUpdate(ctx context.Context, req *logical.Reques
 		return nil, err
 	}
 
-	roleIDs, roles, err := b.parseRoleIDs(ctx, client, d)
+	roleIDs, roles, err := parseRoleIDs(ctx, client, d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -175,7 +175,7 @@ func (b *backend) pathRolesCreateUpdate(ctx context.Context, req *logical.Reques
 		return nil, err
 	}
 
-	lmUser, err = b.createUpdateLMUser(ctx, client, lmUser)
+	lmUser, err = createUpdateLMUser(ctx, client, lmUser)
 	if err != nil {
 		warnings = append(warnings, err.Error())
 	}
@@ -192,7 +192,7 @@ func (b *backend) pathRolesCreateUpdate(ctx context.Context, req *logical.Reques
 	return nil, nil
 }
 
-func (b *backend) pathRolesList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *BackendLM) pathRolesList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	roles, err := req.Storage.List(ctx, "roles/")
 	if err != nil {
 		return nil, err
@@ -216,7 +216,7 @@ func getRoles(ctx context.Context, name string, s logical.Storage) (*Role, error
 	return rs, nil
 }
 
-func (b *backend) parseRoleIDs(ctx context.Context, client *lm.DefaultApiService, d *framework.FieldData) ([]int32, string, error) {
+func parseRoleIDs(ctx context.Context, client *lm.DefaultApiService, d *framework.FieldData) ([]int32, string, error) {
 	// Role Bindings
 	roles, _ := d.GetOk("roles")
 	if roles == "" {
@@ -228,7 +228,7 @@ func (b *backend) parseRoleIDs(ctx context.Context, client *lm.DefaultApiService
 		return nil, "", fmt.Errorf("given empty roles string")
 	}
 
-	roleIDs, err := b.getLMRoleIds(ctx, client, roleNames)
+	roleIDs, err := getLMRoleIds(ctx, client, roleNames)
 	return roleIDs, roles.(string), err
 }
 

@@ -13,7 +13,7 @@ import (
 	lm "github.com/logicmonitor/lm-sdk-go"
 )
 
-func pathConfig(b *backend) *framework.Path {
+func pathConfig(b *BackendLM) *framework.Path {
 	return &framework.Path{
 		Pattern: "config",
 		Fields: map[string]*framework.FieldSchema{
@@ -49,7 +49,7 @@ func pathConfig(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *BackendLM) pathConfigRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	cfg, err := getConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
@@ -67,16 +67,16 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, data
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"account_domain": string(cfg.AccountDomain),
+			"account_domain": cfg.AccountDomain,
 			"ttl":            int64(cfg.TTL / time.Second),
 			"max_ttl":        int64(cfg.MaxTTL / time.Second),
 			"access_key":     key,
-			"access_id":      string(cfg.APIKey.ID),
+			"access_id":      cfg.APIKey.ID,
 		},
 	}, nil
 }
 
-func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *BackendLM) pathConfigWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	cfg, err := getConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err

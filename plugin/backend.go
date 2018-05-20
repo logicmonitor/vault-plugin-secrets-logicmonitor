@@ -14,7 +14,8 @@ const (
 	userAgentBase = "LogicMonitor Vault Secrets/"
 )
 
-type backend struct {
+// BackendLM implementation
+type BackendLM struct {
 	*framework.Backend
 
 	rolesLock sync.Mutex
@@ -30,8 +31,8 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 }
 
 // Backend definition
-func Backend() *backend {
-	var b backend
+func Backend() *BackendLM {
+	var b BackendLM
 
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),

@@ -67,7 +67,7 @@ func RandASCIIBytes(n int) []byte {
 	// fill output
 	for pos := range output {
 		// get random item
-		random := uint8(randomness[pos])
+		random := randomness[pos]
 
 		// random % 64
 		randomPos := random % uint8(len(encodeURL))

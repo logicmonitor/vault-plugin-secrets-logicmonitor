@@ -15,7 +15,7 @@ const (
 	APITokens = "api_tokens"
 )
 
-func apiTokens(b *backend) *framework.Secret {
+func apiTokens(b *BackendLM) *framework.Secret {
 	return &framework.Secret{
 		Type: APITokens,
 		Fields: map[string]*framework.FieldSchema{
@@ -33,7 +33,7 @@ func apiTokens(b *backend) *framework.Secret {
 	}
 }
 
-func pathAPITokens(b *backend) *framework.Path {
+func pathAPITokens(b *BackendLM) *framework.Path {
 	return &framework.Path{
 		Pattern: fmt.Sprintf("tokens/%s", framework.GenericNameRegex("role")),
 		Fields: map[string]*framework.FieldSchema{
@@ -52,7 +52,7 @@ func pathAPITokens(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathAPITokensReadUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *BackendLM) pathAPITokensReadUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	roleName := d.Get("role").(string)
 
 	role, err := getRoles(ctx, roleName, req.Storage)
@@ -66,7 +66,7 @@ func (b *backend) pathAPITokensReadUpdate(ctx context.Context, req *logical.Requ
 	return b.getAPITokens(ctx, req.Storage, role)
 }
 
-func (b *backend) tokenRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *BackendLM) tokenRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Access tokens do not expire so just respond with the stored info
 	secretD := map[string]interface{}{
 		"access_id":  req.Secret.InternalData["access_id"].(string),
@@ -76,7 +76,7 @@ func (b *backend) tokenRenew(ctx context.Context, req *logical.Request, d *frame
 	return resp, nil
 }
 
-func (b *backend) tokenRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *BackendLM) tokenRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	ctx, client, err := newLMClient(ctx, req.Storage)
 	if err != nil {
 		return nil, err
@@ -102,7 +102,7 @@ func (b *backend) tokenRevoke(ctx context.Context, req *logical.Request, d *fram
 	return nil, err
 }
 
-func (b *backend) getAPITokens(ctx context.Context, s logical.Storage, r *Role) (*logical.Response, error) {
+func (b *BackendLM) getAPITokens(ctx context.Context, s logical.Storage, r *Role) (*logical.Response, error) {
 	ctx, client, err := newLMClient(ctx, s)
 	if err != nil {
 		return nil, err
