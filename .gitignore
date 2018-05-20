@@ -1,0 +1,4 @@
+*.py
+*.pyc
+*.sh
+vault-plugin-secrets-logicmonitor
