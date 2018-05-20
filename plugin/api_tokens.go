@@ -11,6 +11,7 @@ import (
 )
 
 const (
+	// APITokens identifies the key used to store API token values
 	APITokens = "api_tokens"
 )
 
@@ -54,7 +55,7 @@ func pathAPITokens(b *backend) *framework.Path {
 func (b *backend) pathAPITokensReadUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	roleName := d.Get("role").(string)
 
-	role, err := getRoles(roleName, ctx, req.Storage)
+	role, err := getRoles(ctx, roleName, req.Storage)
 	if err != nil {
 		return nil, err
 	}

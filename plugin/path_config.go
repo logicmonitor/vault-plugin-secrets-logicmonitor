@@ -85,22 +85,11 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 		cfg = &config{}
 	}
 
-	AccountDomain, ok := data.GetOk("account_domain")
-	if ok {
-		match, err := regexp.MatchString(".logicmonitor.com$", AccountDomain.(string))
-		if !match {
-			return logical.ErrorResponse("invalid account url: must be a .logicmonitor.com address"), nil
-		}
-		addrs, err := net.LookupHost(AccountDomain.(string))
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("invalid account url: %v", err)), nil
-		}
-		if len(addrs) < 1 {
-			return logical.ErrorResponse("invalid account url: no addresses found"), nil
-		}
-		cfg.AccountDomain = strings.Replace(AccountDomain.(string), "https://", "", 1)
-		cfg.AccountDomain = strings.Replace(AccountDomain.(string), "http://", "", 1)
+	domain, e := parseDomain(data)
+	if e != nil {
+		return logical.ErrorResponse(e.Error()), nil
 	}
+	cfg.AccountDomain = domain
 
 	accessID, ok := data.GetOk("access_id")
 	if ok {
@@ -153,11 +142,33 @@ func getConfig(ctx context.Context, s logical.Storage) (*config, error) {
 		return nil, nil
 	}
 
-	if err := cfgRaw.DecodeJSON(&cfg); err != nil {
+	if err = cfgRaw.DecodeJSON(&cfg); err != nil {
 		return nil, err
 	}
-
 	return &cfg, err
+}
+
+func parseDomain(data *framework.FieldData) (string, error) {
+	accountDomain, ok := data.GetOk("account_domain")
+	if !ok {
+		return "", fmt.Errorf("Error retrieving account_domain")
+	}
+
+	domain := accountDomain.(string)
+	match, _ := regexp.MatchString(".logicmonitor.com$", domain)
+	if !match {
+		return "", fmt.Errorf("invalid account url: must be a .logicmonitor.com address")
+	}
+	addrs, err := net.LookupHost(domain)
+	if err != nil {
+		return "", fmt.Errorf("invalid account url: %v", err)
+	}
+	if len(addrs) < 1 {
+		return "", fmt.Errorf("invalid account url: no addresses found")
+	}
+	domain = strings.Replace(domain, "https://", "", 1)
+	domain = strings.Replace(domain, "http://", "", 1)
+	return domain, nil
 }
 
 const pathConfigHelpSyn = `

@@ -14,23 +14,18 @@ import (
 	"github.com/logicmonitor/vault-plugin-secrets-logicmonitor/utilities"
 )
 
-// "github.com/hashicorp/errwrap"
-// "github.com/hashicorp/vault/logical"
-// "github.com/hashicorp/vault/logical/framework"
-// )
-
 const (
-	defaultEmail                  = "vault@logicmonitor.com"
-	serviceAccountMaxLen          = 30
-	serviceAccountDisplayNameTmpl = "Service account for Vault secrets backend role %s"
-	serviceAccountNamePrefix      = "vault_"
-	serviceAccountNameSuffix      = "_role"
+	defaultEmail          = "vault@logicmonitor.com"
+	roleAccountNoteTmpl   = "Managed by Vault. Role account for LM secrets backend role %q"
+	roleAccountNamePrefix = "vault_"
+	roleAccountNameSuffix = "_role"
 )
 
+// Role struct for storing data about the secret role
 type Role struct {
 	Name               string
 	Roles              string
-	RolesInt           []int32
+	RoleIDs            []int32
 	ServiceAccountName string
 	ServiceAccountID   int32
 }
@@ -57,11 +52,8 @@ func (r *Role) validate() error {
 }
 
 func (r *Role) delete(ctx context.Context, s logical.Storage) error {
-	if err := s.Delete(ctx, fmt.Sprintf("%s/%s", rolesStoragePrefix, r.Name)); err != nil {
-		return err
-	}
-
-	return nil
+	err := s.Delete(ctx, fmt.Sprintf("%s/%s", rolesStoragePrefix, r.Name))
+	return err
 }
 
 func (r *Role) save(ctx context.Context, s logical.Storage) error {
@@ -82,7 +74,7 @@ func (r *Role) getServiceAccountName() (string, error) {
 		return r.ServiceAccountName, nil
 	}
 	if r.Name != "" {
-		return serviceAccountNamePrefix + r.Name + serviceAccountNameSuffix, nil
+		return roleAccountNamePrefix + r.Name + roleAccountNameSuffix, nil
 	}
 	return "", fmt.Errorf("can't generate service account name: role name not set")
 }
@@ -101,7 +93,7 @@ func (r *Role) buildLMUser() (*lm.Admin, error) {
 	return &lm.Admin{
 		AcceptEULA: true,
 		Email:      defaultEmail,
-		Note:       "Managed by Vault",
+		Note:       fmt.Sprintf(roleAccountNoteTmpl, r.Name),
 		Password:   utilities.RandASCIIString(20),
 		Roles:      roles,
 		Username:   username,
@@ -110,7 +102,7 @@ func (r *Role) buildLMUser() (*lm.Admin, error) {
 
 func (r *Role) buildLMRoles() ([]lm.Role, error) {
 	var roles []lm.Role
-	for _, i := range r.RolesInt {
+	for _, i := range r.RoleIDs {
 		t := lm.Role{}
 		t.Id = i
 		roles = append(roles, t)
@@ -187,6 +179,10 @@ func (b *backend) deleteLMUser(ctx context.Context, client *lm.DefaultApiService
 
 func (b *backend) createUpdateLMUser(ctx context.Context, client *lm.DefaultApiService, user *lm.Admin) (*lm.Admin, error) {
 	oldUser, err := b.getLMUserByName(ctx, client, user.Username)
+	if err != nil {
+		return nil, err
+	}
+
 	if oldUser != nil {
 		// user exists. update.
 		opts := lm.UpdateAdminByIdOpts{

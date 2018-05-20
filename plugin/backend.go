@@ -20,6 +20,7 @@ type backend struct {
 	rolesLock sync.Mutex
 }
 
+// Factory for the backend
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
 	if err := b.Setup(ctx, conf); err != nil {
@@ -28,6 +29,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	return b, nil
 }
 
+// Backend definition
 func Backend() *backend {
 	var b backend
 

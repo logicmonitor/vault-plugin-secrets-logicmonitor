@@ -9,11 +9,11 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	lm "github.com/logicmonitor/lm-sdk-go"
 )
 
 const (
 	rolesStoragePrefix = "roles"
-	roleType           = "role"
 )
 
 func pathsRoles(b *backend) []*framework.Path {
@@ -68,7 +68,7 @@ func (b *backend) pathRolesExistenceCheck(ctx context.Context, req *logical.Requ
 		return false, errors.New("role name is required")
 	}
 
-	role, err := getRoles(nameRaw.(string), ctx, req.Storage)
+	role, err := getRoles(ctx, nameRaw.(string), req.Storage)
 	if err != nil {
 		return false, err
 	}
@@ -82,7 +82,7 @@ func (b *backend) pathRolesRead(ctx context.Context, req *logical.Request, d *fr
 		return logical.ErrorResponse("name is required"), nil
 	}
 
-	role, err := getRoles(nameRaw.(string), ctx, req.Storage)
+	role, err := getRoles(ctx, nameRaw.(string), req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func (b *backend) pathRolesDelete(ctx context.Context, req *logical.Request, d *
 	}
 	roleName := nameRaw.(string)
 
-	role, err := getRoles(roleName, ctx, req.Storage)
+	role, err := getRoles(ctx, roleName, req.Storage)
 	if err != nil {
 		return nil, errwrap.Wrapf(fmt.Sprintf("unable to get role %s: {{err}}", roleName), err)
 	}
@@ -147,7 +147,7 @@ func (b *backend) pathRolesCreateUpdate(ctx context.Context, req *logical.Reques
 	}
 	name := nameRaw.(string)
 
-	role, err := getRoles(name, ctx, req.Storage)
+	role, err := getRoles(ctx, name, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -158,30 +158,17 @@ func (b *backend) pathRolesCreateUpdate(ctx context.Context, req *logical.Reques
 		}
 	}
 
-	isCreate := req.Operation == logical.CreateOperation
-
-	// Role Bindings
-	roles, newRoles := d.GetOk("roles")
-	roleNames := strings.Split(roles.(string), ",")
-	if roles == "" || len(roleNames) < 1 {
-		return logical.ErrorResponse("given empty roles string"), nil
-	}
-
-	if isCreate && newRoles == false {
-		return logical.ErrorResponse("roles are required for new role"), nil
-	}
-
 	ctx, client, err := newLMClient(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
 
-	role.Roles = roles.(string)
-	rolesInt, err := b.getLMRoleIds(ctx, client, roleNames)
+	roleIDs, roles, err := b.parseRoleIDs(ctx, client, d)
 	if err != nil {
-		return nil, err
+		return logical.ErrorResponse(err.Error()), nil
 	}
-	role.RolesInt = rolesInt
+	role.Roles = roles
+	role.RoleIDs = roleIDs
 
 	lmUser, err := role.buildLMUser()
 	if err != nil {
@@ -213,7 +200,7 @@ func (b *backend) pathRolesList(ctx context.Context, req *logical.Request, d *fr
 	return logical.ListResponse(roles), nil
 }
 
-func getRoles(name string, ctx context.Context, s logical.Storage) (*Role, error) {
+func getRoles(ctx context.Context, name string, s logical.Storage) (*Role, error) {
 	entry, err := s.Get(ctx, fmt.Sprintf("%s/%s", rolesStoragePrefix, name))
 	if err != nil {
 		return nil, err
@@ -227,6 +214,22 @@ func getRoles(name string, ctx context.Context, s logical.Storage) (*Role, error
 		return nil, err
 	}
 	return rs, nil
+}
+
+func (b *backend) parseRoleIDs(ctx context.Context, client *lm.DefaultApiService, d *framework.FieldData) ([]int32, string, error) {
+	// Role Bindings
+	roles, _ := d.GetOk("roles")
+	if roles == "" {
+		return nil, "", fmt.Errorf("roles are required")
+	}
+
+	roleNames := strings.Split(roles.(string), ",")
+	if roles == "" || len(roleNames) < 1 {
+		return nil, "", fmt.Errorf("given empty roles string")
+	}
+
+	roleIDs, err := b.getLMRoleIds(ctx, client, roleNames)
+	return roleIDs, roles.(string), err
 }
 
 const pathRolesHelpSyn = `Read/write sets of LogicMonitor account roles to be given to generated credentials.`
