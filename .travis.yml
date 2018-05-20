@@ -9,6 +9,6 @@ install:
   - go get -v
 
 script:
-  - gometalinter --aggregate --vendor --exclude="zz_generated" --enable-all --disable=gas --disable=gotype --disable=lll --disable=safesql --disable=varcheck --deadline=600s --exclude=vendor ./...
+  - gometalinter --aggregate --vendor --exclude=vendor --exclude="zz_generated" --enable-all --disable=gas --disable=gotype --disable=lll --disable=safesql --disable=unparam --deadline=600s ./...
   - go test $(go list ./... | grep -v /vendor/)
   - go build
