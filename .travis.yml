@@ -4,11 +4,7 @@ go:
   - "1.8"
 
 before_install:
-  - go get -v github.com/alecthomas/gometalinter
-install:
-  - go install
-
-
+  - go install github.com/alecthomas/gometalinter
 
 script:
   - gometalinter --aggregate --vendor --exclude="zz_generated" --enable-all --disable=gas --disable=gotype --disable=lll --disable=safesql --deadline=600s ./...
