@@ -153,6 +153,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/sethvargo/go-password"
+  packages = ["password"]
+  revision = "5e68a1664a916642585547c10af910927627055a"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/net"
   packages = ["context","context/ctxhttp","http/httpguts","http2","http2/hpack","idna","internal/timeseries","trace"]
   revision = "57065200b4b034a1c8ad54ff77069408c2218ae6"
@@ -196,6 +202,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "787ec342bbc14796a92892666ee4b160e50f2e3a718cdf3e84a7a7f6185ec40d"
+  inputs-digest = "4728854dd905435f6e634b9bc624446a4af8fa5d8ec1462239816dd6c8cb368a"
   solver-name = "gps-cdcl"
   solver-version = 1

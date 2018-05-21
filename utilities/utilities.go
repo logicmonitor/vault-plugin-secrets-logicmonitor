@@ -1,11 +1,19 @@
 package utilities
 
 import (
-	"crypto/rand"
 	"fmt"
 	"net/http"
 	"reflect"
+	"strings"
+
+	"github.com/sethvargo/go-password/password"
 )
+
+var unacceptedPasswordCharacters = [...]string{
+	"*",
+	"`",
+	"\"",
+}
 
 // CheckAllErrors is a helper function to deal with the number of possible places that an API call can fail.
 func CheckAllErrors(restResponse interface{}, apiResponse *http.Response, err error) error {
@@ -46,41 +54,13 @@ func CheckAllErrors(restResponse interface{}, apiResponse *http.Response, err er
 	return nil
 }
 
-// len(encodeURL) == 64. This allows (x <= 265) x % 64 to have an even
-// distribution.
-const encodeURL = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
-
-// RandASCIIBytes creates and fills a slice of length n with characters from
-// a-zA-Z0-9_-. It panics if there are any problems getting random bytes.
-func RandASCIIBytes(n int) []byte {
-	output := make([]byte, n)
-
-	// We will take n bytes, one byte for each character of output.
-	randomness := make([]byte, n)
-
-	// read all random
-	_, err := rand.Read(randomness)
+func GeneratePassword() (string, error) {
+	pw, err := password.Generate(20, 5, 5, false, true)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
-
-	// fill output
-	for pos := range output {
-		// get random item
-		random := randomness[pos]
-
-		// random % 64
-		randomPos := random % uint8(len(encodeURL))
-
-		// put into output
-		output[pos] = encodeURL[randomPos]
+	for _, c := range unacceptedPasswordCharacters {
+		pw = strings.Replace(pw, c, "", -1)
 	}
-	return output
-}
-
-// RandASCIIString creates and fills a string slice of length n with characters
-// from a-zA-Z0-9_-. It panics if there are any problems getting random bytes.
-func RandASCIIString(n int) string {
-	b := RandASCIIBytes(n)
-	return string(b[:n])
+	return pw, nil
 }

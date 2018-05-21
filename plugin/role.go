@@ -90,11 +90,16 @@ func (r *Role) buildLMUser(ctx context.Context, s logical.Storage) (*lm.Admin, e
 		return nil, err
 	}
 
+	pw, err := utilities.GeneratePassword()
+  if err != nil {
+    return nil, err
+	}
+
 	defaultUser := &lm.Admin{
 		AcceptEULA: true,
 		Email:      defaultEmail,
 		Note:       fmt.Sprintf(roleAccountNoteTmpl, r.Name),
-		Password:   utilities.RandASCIIString(20),
+		Password:   pw,
 		Roles:      roles,
 		Username:   username,
 	}
@@ -171,7 +176,7 @@ func getLMUserByName(ctx context.Context, client *lm.DefaultApiService, name str
 			return &u, nil
 		}
 	}
-	return nil, fmt.Errorf("LogicMonitor user %q not found", name)
+	return nil, nil
 }
 
 // func getLMUserByID(ctx context.Context, client *lm.DefaultApiService, id int32) (*lm.Admin, error) {

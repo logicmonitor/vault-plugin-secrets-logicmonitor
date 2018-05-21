@@ -177,7 +177,7 @@ func (b *BackendLM) pathRolesCreateUpdate(ctx context.Context, req *logical.Requ
 
 	lmUser, err = createUpdateLMUser(ctx, client, lmUser)
 	if err != nil {
-		warnings = append(warnings, err.Error())
+		return nil, err
 	}
 	role.ServiceAccountID = lmUser.Id
 	role.ServiceAccountName = lmUser.Username
