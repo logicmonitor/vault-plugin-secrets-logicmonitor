@@ -91,8 +91,8 @@ func (r *Role) buildLMUser(ctx context.Context, s logical.Storage) (*lm.Admin, e
 	}
 
 	pw, err := utilities.GeneratePassword()
-  if err != nil {
-    return nil, err
+	if err != nil {
+		return nil, err
 	}
 
 	defaultUser := &lm.Admin{
