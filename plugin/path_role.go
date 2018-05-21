@@ -170,7 +170,7 @@ func (b *BackendLM) pathRolesCreateUpdate(ctx context.Context, req *logical.Requ
 	role.Roles = roles
 	role.RoleIDs = roleIDs
 
-	lmUser, err := role.buildLMUser()
+	lmUser, err := role.buildLMUser(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}

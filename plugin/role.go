@@ -79,7 +79,7 @@ func (r *Role) getServiceAccountName() (string, error) {
 	return "", fmt.Errorf("can't generate service account name: role name not set")
 }
 
-func (r *Role) buildLMUser() (*lm.Admin, error) {
+func (r *Role) buildLMUser(ctx context.Context, s logical.Storage) (*lm.Admin, error) {
 	username, err := r.getServiceAccountName()
 	if err != nil {
 		return nil, err
@@ -90,14 +90,28 @@ func (r *Role) buildLMUser() (*lm.Admin, error) {
 		return nil, err
 	}
 
-	return &lm.Admin{
+	defaultUser := &lm.Admin{
 		AcceptEULA: true,
 		Email:      defaultEmail,
 		Note:       fmt.Sprintf(roleAccountNoteTmpl, r.Name),
 		Password:   utilities.RandASCIIString(20),
 		Roles:      roles,
 		Username:   username,
-	}, nil
+	}
+
+	// if we can't get a client, just bail and return the generic user
+	ctx, client, err := newLMClient(ctx, s)
+	if err != nil {
+		return defaultUser, nil
+	}
+
+	// attempt to update existing user if it exists
+	oldUser, err := getLMUserByName(ctx, client, username)
+	if err == nil && oldUser != nil {
+		oldUser.Roles = roles
+		return oldUser, nil
+	}
+	return defaultUser, nil
 }
 
 func (r *Role) buildLMRoles() ([]lm.Role, error) {
