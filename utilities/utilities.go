@@ -54,6 +54,7 @@ func CheckAllErrors(restResponse interface{}, apiResponse *http.Response, err er
 	return nil
 }
 
+// GeneratePassword random password generator
 func GeneratePassword() (string, error) {
 	pw, err := password.Generate(20, 5, 5, false, true)
 	if err != nil {
