@@ -109,7 +109,7 @@ func (b *BackendLM) getAPITokens(ctx context.Context, s logical.Storage, r *Role
 	}
 
 	token := lm.ApiToken{
-		Note: "Managed by Vault",
+		Note: fmt.Sprintf("Managed by Vault. Temporary token for Vault role %s", r.Name),
 	}
 
 	restResponse, apiResponse, err := client.DefaultApi.AddApiTokenByAdminId(ctx, r.ServiceAccountID, token)
