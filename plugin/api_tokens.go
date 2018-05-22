@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/antihax/optional"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	lm "github.com/logicmonitor/lm-sdk-go"
@@ -63,7 +64,11 @@ func (b *BackendLM) pathAPITokensReadUpdate(ctx context.Context, req *logical.Re
 		return logical.ErrorResponse(fmt.Sprintf("role '%s' does not exist", roleName)), nil
 	}
 
-	return b.getAPITokens(ctx, req.Storage, role)
+	ctx, client, err := newLMClient(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+	return b.getAPITokens(ctx, client, role)
 }
 
 func (b *BackendLM) tokenRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -102,11 +107,12 @@ func (b *BackendLM) tokenRevoke(ctx context.Context, req *logical.Request, d *fr
 	return nil, err
 }
 
-func (b *BackendLM) getAPITokens(ctx context.Context, s logical.Storage, r *Role) (*logical.Response, error) {
-	ctx, client, err := newLMClient(ctx, s)
-	if err != nil {
-		return nil, err
+func (b *BackendLM) getAPITokens(ctx context.Context, client *lm.APIClient, r *Role) (*logical.Response, error) {
+	opts := lm.GetApiTokenListByAdminIdOpts{
+		Size:   optional.NewInt32(1),
+		Offset: optional.NewInt32(0),
 	}
+	client.DefaultApi.GetApiTokenListByAdminId(ctx, r.ServiceAccountID, &opts)
 
 	token := lm.ApiToken{
 		Note: fmt.Sprintf("Managed by Vault. Temporary token for Vault role %s", r.Name),
