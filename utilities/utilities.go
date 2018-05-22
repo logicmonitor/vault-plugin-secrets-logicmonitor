@@ -40,16 +40,16 @@ func CheckAllErrors(restResponse interface{}, apiResponse *http.Response, err er
 		}
 	}
 
+	if err != nil {
+		return fmt.Errorf("[ERROR] %v", err)
+	}
+
 	if restResponseStatus != http.StatusOK {
 		return fmt.Errorf("[REST] [%d] %s", restResponseStatus, restResponseMessage)
 	}
 
 	if apiResponse.StatusCode != http.StatusOK {
 		return fmt.Errorf("[API] [%d] %s", apiResponse.StatusCode, restResponseMessage)
-	}
-
-	if err != nil {
-		return fmt.Errorf("[ERROR] %v", err)
 	}
 	return nil
 }
