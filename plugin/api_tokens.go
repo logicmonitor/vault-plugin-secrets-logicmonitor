@@ -95,7 +95,7 @@ func (b *BackendLM) tokenRevoke(ctx context.Context, req *logical.Request, d *fr
 	userID := int32(userIDRaw)
 	tokenID := int32(tokenIDRaw)
 
-	restResponse, apiResponse, err := client.DeleteApiTokenById(ctx, userID, tokenID)
+	restResponse, apiResponse, err := client.DefaultApi.DeleteApiTokenById(ctx, userID, tokenID)
 	if _err := utilities.CheckAllErrors(restResponse, apiResponse, err); _err != nil {
 		return nil, fmt.Errorf("Failed to delete api token %v from user %v: %v", tokenID, userID, _err)
 	}
@@ -112,7 +112,7 @@ func (b *BackendLM) getAPITokens(ctx context.Context, s logical.Storage, r *Role
 		Note: "Managed by Vault",
 	}
 
-	restResponse, apiResponse, err := client.AddApiTokenByAdminId(ctx, r.ServiceAccountID, token)
+	restResponse, apiResponse, err := client.DefaultApi.AddApiTokenByAdminId(ctx, r.ServiceAccountID, token)
 	if _err := utilities.CheckAllErrors(restResponse, apiResponse, err); _err != nil {
 		return nil, fmt.Errorf("Failed to create API tokens for user %d: %v", r.ServiceAccountID, _err)
 	}

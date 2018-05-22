@@ -216,7 +216,7 @@ func getRoles(ctx context.Context, name string, s logical.Storage) (*Role, error
 	return rs, nil
 }
 
-func parseRoleIDs(ctx context.Context, client *lm.DefaultApiService, d *framework.FieldData) ([]int32, string, error) {
+func parseRoleIDs(ctx context.Context, client *lm.APIClient, d *framework.FieldData) ([]int32, string, error) {
 	// Role Bindings
 	roles, _ := d.GetOk("roles")
 	if roles == "" {

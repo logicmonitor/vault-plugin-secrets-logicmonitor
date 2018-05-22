@@ -62,7 +62,7 @@ func Backend() *BackendLM {
 	return &b
 }
 
-func newLMClient(ctx context.Context, s logical.Storage) (context.Context, *lm.DefaultApiService, error) {
+func newLMClient(ctx context.Context, s logical.Storage) (context.Context, *lm.APIClient, error) {
 	cfg, err := getConfig(ctx, s)
 	if err != nil {
 		return nil, nil, err
@@ -74,7 +74,7 @@ func newLMClient(ctx context.Context, s logical.Storage) (context.Context, *lm.D
 
 	api := lm.NewAPIClient(config)
 	ctx = context.WithValue(ctx, lm.ContextAPIKey, cfg.APIKey)
-	return ctx, api.DefaultApi, nil
+	return ctx, api, nil
 }
 
 const backendHelp = `
