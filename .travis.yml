@@ -22,6 +22,7 @@ script:
     --disable=safesql \
     --disable=unparam \
     --disable errcheck \
+    --disable=gochecknoglobals \
     --deadline=600s \
     ./...
   - go test $(go list ./... | grep -v /vendor/)

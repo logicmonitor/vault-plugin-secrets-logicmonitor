@@ -109,7 +109,7 @@ func (r *Role) buildLMUser(ctx context.Context, s logical.Storage) (*models.Admi
 	}
 
 	// if we can't get a client, just bail and return the generic user
-	ctx, client, err := newLMClient(ctx, s)
+	_, client, err := newLMClient(ctx, s)
 	if err != nil {
 		return defaultUser, nil
 	}

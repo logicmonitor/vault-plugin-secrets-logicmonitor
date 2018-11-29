@@ -11,10 +11,6 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-const (
-	userAgentBase = "LogicMonitor Vault Secrets/"
-)
-
 // BackendLM implementation
 type BackendLM struct {
 	*framework.Backend
@@ -68,8 +64,6 @@ func newLMClient(ctx context.Context, s logical.Storage) (context.Context, *lmcl
 	if err != nil {
 		return nil, nil, err
 	}
-
-	// config.UserAgent = userAgentBase
 
 	config := lmclient.NewConfig()
 	config.SetAccessID(&cfg.APIKey.AccessID)

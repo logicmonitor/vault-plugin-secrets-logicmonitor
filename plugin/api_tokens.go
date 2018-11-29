@@ -84,7 +84,7 @@ func (b *BackendLM) tokenRenew(ctx context.Context, req *logical.Request, d *fra
 }
 
 func (b *BackendLM) tokenRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	ctx, client, err := newLMClient(ctx, req.Storage)
+	_, client, err := newLMClient(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,6 @@ func (b *BackendLM) getAPITokens(ctx context.Context, client *lmclient.LMSdkGo, 
 	params.SetAdminID(r.ServiceAccountID)
 	params.SetOffset(utilities.LiteralInt32Pointer(int32(0)))
 	params.SetSize(utilities.LiteralInt32Pointer(int32(-1)))
-	client.LM.GetAPITokenListByAdminID(params)
 
 	token := &models.APIToken{
 		Note: fmt.Sprintf("Managed by Vault. Temporary token for Vault role %s", r.Name),
@@ -145,6 +144,7 @@ func (b *BackendLM) getAPITokens(ctx context.Context, client *lmclient.LMSdkGo, 
 	return resp, err
 }
 
+// nolint: gosec
 const pathTokenHelpSyn = `Generate a set of LogicMonitor API access tokens.`
 
 const pathTokenHelpDesc = `

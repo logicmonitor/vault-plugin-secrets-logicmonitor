@@ -156,7 +156,11 @@ func parseDomain(data *framework.FieldData) (string, error) {
 	}
 
 	domain := accountDomain.(string)
-	match, _ := regexp.MatchString(".logicmonitor.com$", domain)
+	match, err := regexp.MatchString(".logicmonitor.com$", domain)
+	if err != nil {
+		return "", fmt.Errorf("error parsing account url: %v", err)
+	}
+
 	if !match {
 		return "", fmt.Errorf("invalid account url: must be a .logicmonitor.com address")
 	}
