@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/antihax/optional"
+	lmclient "github.com/logicmonitor/lm-sdk-go/client"
+	"github.com/logicmonitor/lm-sdk-go/client/lm"
+	"github.com/logicmonitor/lm-sdk-go/models"
+
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	lm "github.com/logicmonitor/lm-sdk-go"
 	"github.com/logicmonitor/vault-plugin-secrets-logicmonitor/utilities"
 )
 
@@ -97,41 +99,45 @@ func (b *BackendLM) tokenRevoke(ctx context.Context, req *logical.Request, d *fr
 		return nil, fmt.Errorf("secret is missing token internal data for user_id")
 	}
 
-	userID := int32(userIDRaw)
-	tokenID := int32(tokenIDRaw)
-
-	restResponse, apiResponse, err := client.DefaultApi.DeleteApiTokenById(ctx, userID, tokenID)
-	if _err := utilities.CheckAllErrors(restResponse, apiResponse, err); _err != nil {
-		return nil, fmt.Errorf("Failed to delete api token %v from user %v: %v", tokenID, userID, _err)
+	params := lm.NewDeleteAPITokenByIDParams()
+	params.SetAdminID(int32(userIDRaw))
+	params.SetApitokenID(int32(tokenIDRaw))
+	_, err = client.LM.DeleteAPITokenByID(params)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to delete api token %v from user %v: %v", params.ApitokenID, params.AdminID, err)
 	}
 	return nil, err
 }
 
-func (b *BackendLM) getAPITokens(ctx context.Context, client *lm.APIClient, r *Role) (*logical.Response, error) {
-	opts := lm.GetApiTokenListByAdminIdOpts{
-		Size:   optional.NewInt32(1),
-		Offset: optional.NewInt32(0),
-	}
-	client.DefaultApi.GetApiTokenListByAdminId(ctx, r.ServiceAccountID, &opts)
+func (b *BackendLM) getAPITokens(ctx context.Context, client *lmclient.LMSdkGo, r *Role) (*logical.Response, error) {
+	params := lm.NewGetAPITokenListByAdminIDParams()
+	params.SetAdminID(r.ServiceAccountID)
+	params.SetOffset(utilities.LiteralInt32Pointer(int32(0)))
+	params.SetSize(utilities.LiteralInt32Pointer(int32(-1)))
+	client.LM.GetAPITokenListByAdminID(params)
 
-	token := lm.ApiToken{
+	token := &models.APIToken{
 		Note: fmt.Sprintf("Managed by Vault. Temporary token for Vault role %s", r.Name),
 	}
 
-	restResponse, apiResponse, err := client.DefaultApi.AddApiTokenByAdminId(ctx, r.ServiceAccountID, token)
-	if _err := utilities.CheckAllErrors(restResponse, apiResponse, err); _err != nil {
-		return nil, fmt.Errorf("Failed to create API tokens for user %d: %v", r.ServiceAccountID, _err)
+	addParams := lm.NewAddAPITokenByAdminIDParams()
+	addParams.SetAdminID(r.ServiceAccountID)
+	addParams.SetBody(token)
+
+	response, err := client.LM.AddAPITokenByAdminID(addParams)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to create API tokens for user %d: %v", r.ServiceAccountID, err)
 	}
-	token = *restResponse.Data
+	token = response.Payload
 
 	secretD := map[string]interface{}{
-		"access_id":  token.AccessId,
+		"access_id":  token.AccessID,
 		"access_key": token.AccessKey,
 	}
 	internalD := map[string]interface{}{
-		"access_id":  token.AccessId,
+		"access_id":  token.AccessID,
 		"access_key": token.AccessKey,
-		"token_id":   token.Id,
+		"token_id":   token.ID,
 		"role":       r.Name,
 		"user_id":    r.ServiceAccountID,
 	}

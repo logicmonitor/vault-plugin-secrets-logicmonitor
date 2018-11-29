@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"strings"
 
+	lmclient "github.com/logicmonitor/lm-sdk-go/client"
+
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	lm "github.com/logicmonitor/lm-sdk-go"
 )
 
 const (
@@ -163,7 +164,7 @@ func (b *BackendLM) pathRolesCreateUpdate(ctx context.Context, req *logical.Requ
 		return nil, err
 	}
 
-	roleIDs, roles, err := parseRoleIDs(ctx, client, d)
+	roleIDs, roles, err := parseRoleIDs(client, d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -179,8 +180,8 @@ func (b *BackendLM) pathRolesCreateUpdate(ctx context.Context, req *logical.Requ
 	if err != nil {
 		return nil, err
 	}
-	role.ServiceAccountID = lmUser.Id
-	role.ServiceAccountName = lmUser.Username
+	role.ServiceAccountID = lmUser.ID
+	role.ServiceAccountName = *lmUser.Username
 
 	if err := role.save(ctx, req.Storage); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -216,7 +217,7 @@ func getRoles(ctx context.Context, name string, s logical.Storage) (*Role, error
 	return rs, nil
 }
 
-func parseRoleIDs(ctx context.Context, client *lm.APIClient, d *framework.FieldData) ([]int32, string, error) {
+func parseRoleIDs(client *lmclient.LMSdkGo, d *framework.FieldData) ([]int32, string, error) {
 	// Role Bindings
 	roles, _ := d.GetOk("roles")
 	if roles == "" {
@@ -228,7 +229,7 @@ func parseRoleIDs(ctx context.Context, client *lm.APIClient, d *framework.FieldD
 		return nil, "", fmt.Errorf("given empty roles string")
 	}
 
-	roleIDs, err := getLMRoleIds(ctx, client, roleNames)
+	roleIDs, err := getLMRoleIds(client, roleNames)
 	return roleIDs, roles.(string), err
 }
 

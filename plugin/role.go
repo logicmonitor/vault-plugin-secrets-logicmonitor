@@ -7,10 +7,13 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/antihax/optional"
+	"github.com/logicmonitor/lm-sdk-go/client/lm"
+
+	lmclient "github.com/logicmonitor/lm-sdk-go/client"
+	"github.com/logicmonitor/lm-sdk-go/models"
+
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/logical"
-	lm "github.com/logicmonitor/lm-sdk-go"
 	"github.com/logicmonitor/vault-plugin-secrets-logicmonitor/utilities"
 )
 
@@ -79,7 +82,7 @@ func (r *Role) getServiceAccountName() (string, error) {
 	return "", fmt.Errorf("can't generate service account name: role name not set")
 }
 
-func (r *Role) buildLMUser(ctx context.Context, s logical.Storage) (*lm.Admin, error) {
+func (r *Role) buildLMUser(ctx context.Context, s logical.Storage) (*models.Admin, error) {
 	username, err := r.getServiceAccountName()
 	if err != nil {
 		return nil, err
@@ -95,13 +98,14 @@ func (r *Role) buildLMUser(ctx context.Context, s logical.Storage) (*lm.Admin, e
 		return nil, err
 	}
 
-	defaultUser := &lm.Admin{
+	email := defaultEmail
+	defaultUser := &models.Admin{
 		AcceptEULA: true,
-		Email:      defaultEmail,
+		Email:      &email,
 		Note:       fmt.Sprintf(roleAccountNoteTmpl, r.Name),
-		Password:   pw,
+		Password:   &pw,
 		Roles:      roles,
-		Username:   username,
+		Username:   &username,
 	}
 
 	// if we can't get a client, just bail and return the generic user
@@ -111,7 +115,7 @@ func (r *Role) buildLMUser(ctx context.Context, s logical.Storage) (*lm.Admin, e
 	}
 
 	// attempt to update existing user if it exists
-	oldUser, err := getLMUserByName(ctx, client, username)
+	oldUser, err := getLMUserByName(client, username)
 	if err == nil && oldUser != nil {
 		oldUser.Roles = roles
 		return oldUser, nil
@@ -119,103 +123,99 @@ func (r *Role) buildLMUser(ctx context.Context, s logical.Storage) (*lm.Admin, e
 	return defaultUser, nil
 }
 
-func (r *Role) buildLMRoles() ([]lm.Role, error) {
-	var roles []lm.Role
+func (r *Role) buildLMRoles() ([]*models.Role, error) {
+	var roles []*models.Role
 	for _, i := range r.RoleIDs {
-		t := lm.Role{}
-		t.Id = i
-		roles = append(roles, t)
+		t := models.Role{}
+		t.ID = i
+		roles = append(roles, &t)
 	}
 	return roles, nil
 }
 
-func getLMRoleIds(ctx context.Context, client *lm.APIClient, roles []string) ([]int32, error) {
+func getLMRoleIds(client *lmclient.LMSdkGo, roles []string) ([]int32, error) {
 	var ret []int32
 	for _, n := range roles {
-		role, err := getLMRoleByName(ctx, client, n)
+		role, err := getLMRoleByName(client, n)
 		if err != nil {
 			return nil, err
 		}
-		ret = append(ret, role.Id)
+		ret = append(ret, role.ID)
 	}
 	return ret, nil
 }
 
-func getLMRoleByName(ctx context.Context, client *lm.APIClient, name string) (*lm.Role, error) {
-	opts := lm.GetRoleListOpts{
-		Size:   optional.NewInt32(-1),
-		Offset: optional.NewInt32(0),
-		Filter: optional.NewString(fmt.Sprintf("name:%s", url.QueryEscape(strings.Trim(name, " ")))),
-	}
-	restResponse, apiResponse, err := client.DefaultApi.GetRoleList(ctx, &opts)
-	if _err := utilities.CheckAllErrors(restResponse, apiResponse, err); _err != nil {
-		return nil, fmt.Errorf("Failed to get roles list when searching for %q: %v", name, _err)
+func getLMRoleByName(client *lmclient.LMSdkGo, name string) (*models.Role, error) {
+	filter := fmt.Sprintf("name:\"%s\"", url.QueryEscape(strings.Trim(name, " ")))
+	params := lm.NewGetRoleListParams()
+	params.SetFilter(&filter)
+	params.SetOffset(utilities.LiteralInt32Pointer(int32(0)))
+	params.SetSize(utilities.LiteralInt32Pointer(int32(-1)))
+	response, err := client.LM.GetRoleList(params)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get roles list when searching for %q: %s", name, err)
 	}
 
-	for _, r := range restResponse.Data.Items {
-		if r.Name == name {
-			return &r, nil
+	for _, r := range response.Payload.Items {
+		if *r.Name == name {
+			return r, nil
 		}
 	}
 	return nil, fmt.Errorf("LogicMonitor role %q not found", name)
 }
 
-func getLMUserByName(ctx context.Context, client *lm.APIClient, name string) (*lm.Admin, error) {
-	opts := lm.GetAdminListOpts{
-		Size:   optional.NewInt32(-1),
-		Offset: optional.NewInt32(0),
-		Filter: optional.NewString(fmt.Sprintf("username:%s", url.QueryEscape(name))),
-	}
-	restResponse, apiResponse, err := client.DefaultApi.GetAdminList(ctx, &opts)
-	if _err := utilities.CheckAllErrors(restResponse, apiResponse, err); _err != nil {
-		return nil, fmt.Errorf("Failed to get users list when searching for %q: %v", name, _err)
+func getLMUserByName(client *lmclient.LMSdkGo, name string) (*models.Admin, error) {
+	filter := fmt.Sprintf("username:\"%s\"", url.QueryEscape(name))
+	params := lm.NewGetAdminListParams()
+	params.SetFilter(&filter)
+	params.SetOffset(utilities.LiteralInt32Pointer(int32(0)))
+	params.SetSize(utilities.LiteralInt32Pointer(int32(-1)))
+	response, err := client.LM.GetAdminList(params)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get users list when searching for %q: %v", name, err)
 	}
 
-	for _, u := range restResponse.Data.Items {
-		if u.Username == name {
-			return &u, nil
+	for _, u := range response.Payload.Items {
+		if *u.Username == name {
+			return u, nil
 		}
 	}
 	return nil, nil
 }
 
-// func getLMUserByID(ctx context.Context, client *lm.APIClient, id int32) (*lm.Admin, error) {
-// 	opts := lm.GetAdminByIdOpts{}
-// 	restResponse, apiResponse, err := client.DefaultApi.GetAdminById(ctx, id, &opts)
-// 	if _err := utilities.CheckAllErrors(restResponse, apiResponse, err); _err != nil {
-// 		return nil, fmt.Errorf("Failed to get users list when searching for %q: %v", id, _err)
-// 	}
-// 	return restResponse.Data, nil
-// }
-
-func deleteLMUser(ctx context.Context, client *lm.APIClient, id int32) error {
-	restResponse, apiResponse, err := client.DefaultApi.DeleteAdminById(ctx, id)
-	if _err := utilities.CheckAllErrors(restResponse, apiResponse, err); _err != nil {
-		return fmt.Errorf("Failed to delete user %q: %v", id, _err)
+func deleteLMUser(ctx context.Context, client *lmclient.LMSdkGo, id int32) error {
+	params := lm.NewDeleteAdminByIDParams()
+	params.SetID(id)
+	_, err := client.LM.DeleteAdminByID(params)
+	if err != nil {
+		return fmt.Errorf("Failed to delete user %q: %v", id, err)
 	}
 	return nil
 }
 
-func createUpdateLMUser(ctx context.Context, client *lm.APIClient, user *lm.Admin) (*lm.Admin, error) {
-	oldUser, err := getLMUserByName(ctx, client, user.Username)
+func createUpdateLMUser(ctx context.Context, client *lmclient.LMSdkGo, user *models.Admin) (*models.Admin, error) {
+	oldUser, err := getLMUserByName(client, *user.Username)
 	if err != nil {
 		return nil, err
 	}
 
 	if oldUser == nil {
-		restResponse, apiResponse, err2 := client.DefaultApi.AddAdmin(ctx, *user)
-		if _err := utilities.CheckAllErrors(restResponse, apiResponse, err2); _err != nil {
-			return nil, fmt.Errorf("Failed to create user: %v", _err)
+		params := lm.NewAddAdminParams()
+		params.SetBody(user)
+		response, err2 := client.LM.AddAdmin(params)
+		if err2 != nil {
+			return nil, fmt.Errorf("Failed to create user: %v", err2)
 		}
-		return restResponse.Data, nil
+		return response.Payload, nil
 	}
 
 	// user exists. update.
-	opts := lm.UpdateAdminByIdOpts{}
-
-	restResponse, apiResponse, err := client.DefaultApi.UpdateAdminById(ctx, oldUser.Id, *user, &opts)
-	if _err := utilities.CheckAllErrors(restResponse, apiResponse, err); _err != nil {
-		return nil, fmt.Errorf("Failed to update user: %v", _err)
+	params := lm.NewUpdateAdminByIDParams()
+	params.SetBody(user)
+	params.SetID(oldUser.ID)
+	response, err := client.LM.UpdateAdminByID(params)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to update user: %v", err)
 	}
-	return restResponse.Data, nil
+	return response.Payload, nil
 }

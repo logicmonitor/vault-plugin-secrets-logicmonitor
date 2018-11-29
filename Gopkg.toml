@@ -20,11 +20,6 @@
 #  name = "github.com/x/y"
 #  version = "2.4.0"
 
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/antihax/optional"
-
 [[constraint]]
   branch = "master"
   name = "github.com/hashicorp/errwrap"
@@ -40,3 +35,6 @@
 [[constraint]]
   branch = "build-from-latest-swagger-revision"
   name = "github.com/logicmonitor/lm-sdk-go"
+
+#  github.com/go-openapi/runtime
+#  github.com/go-openapi/validate

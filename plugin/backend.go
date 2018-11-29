@@ -5,9 +5,10 @@ import (
 	"strings"
 	"sync"
 
+	lmclient "github.com/logicmonitor/lm-sdk-go/client"
+
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	lm "github.com/logicmonitor/lm-sdk-go"
 )
 
 const (
@@ -62,19 +63,21 @@ func Backend() *BackendLM {
 	return &b
 }
 
-func newLMClient(ctx context.Context, s logical.Storage) (context.Context, *lm.APIClient, error) {
+func newLMClient(ctx context.Context, s logical.Storage) (context.Context, *lmclient.LMSdkGo, error) {
 	cfg, err := getConfig(ctx, s)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	config := lm.NewConfiguration()
-	config.BasePath = "https://" + cfg.AccountDomain + "/santaba/rest"
-	config.UserAgent = userAgentBase
+	// config.UserAgent = userAgentBase
 
-	api := lm.NewAPIClient(config)
-	ctx = context.WithValue(ctx, lm.ContextAPIKey, cfg.APIKey)
-	return ctx, api, nil
+	config := lmclient.NewConfig()
+	config.SetAccessID(&cfg.APIKey.AccessID)
+	config.SetAccessKey(&cfg.APIKey.AccessKey)
+	config.SetAccountDomain(&cfg.AccountDomain)
+	client := lmclient.New(config)
+
+	return ctx, client, nil
 }
 
 const backendHelp = `

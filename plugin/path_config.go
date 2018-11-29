@@ -8,9 +8,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/logicmonitor/lm-sdk-go/models"
+
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	lm "github.com/logicmonitor/lm-sdk-go"
 )
 
 func pathConfig(b *BackendLM) *framework.Path {
@@ -59,7 +60,7 @@ func (b *BackendLM) pathConfigRead(ctx context.Context, req *logical.Request, da
 	}
 
 	var key string
-	if cfg.APIKey.Key == "" {
+	if cfg.APIKey.AccessKey == "" {
 		key = "n/a"
 	} else {
 		key = "<sensitive>"
@@ -71,7 +72,7 @@ func (b *BackendLM) pathConfigRead(ctx context.Context, req *logical.Request, da
 			"ttl":            int64(cfg.TTL / time.Second),
 			"max_ttl":        int64(cfg.MaxTTL / time.Second),
 			"access_key":     key,
-			"access_id":      cfg.APIKey.ID,
+			"access_id":      cfg.APIKey.AccessID,
 		},
 	}, nil
 }
@@ -93,12 +94,12 @@ func (b *BackendLM) pathConfigWrite(ctx context.Context, req *logical.Request, d
 
 	accessID, ok := data.GetOk("access_id")
 	if ok {
-		cfg.APIKey.ID = accessID.(string)
+		cfg.APIKey.AccessID = accessID.(string)
 	}
 
 	accessKey, ok := data.GetOk("access_key")
 	if ok {
-		cfg.APIKey.Key = accessKey.(string)
+		cfg.APIKey.AccessKey = accessKey.(string)
 	}
 
 	// Update token TTL.
@@ -126,7 +127,7 @@ func (b *BackendLM) pathConfigWrite(ctx context.Context, req *logical.Request, d
 
 type config struct {
 	AccountDomain string
-	APIKey        lm.APIKey
+	APIKey        models.APIToken
 
 	TTL    time.Duration
 	MaxTTL time.Duration
